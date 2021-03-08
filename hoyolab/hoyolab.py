@@ -49,26 +49,26 @@ def parse_hoyoID(browser):
     soup = BeautifulSoup(actual_id_html.text, 'html.parser')
     actual_id = soup.find('div', class_='actual_id').getText()
 
-    logger.info(f'Последний ID: {actual_id}')
+    logger.info('Последний ID: {id}'.format(id = actual_id))
     str_id_offset = int(actual_id)
 
     logger.info('Начинаем парсинг')
     str_id_offset+=1
 
     while True:
-        logger.info(f'Проверяем ID: {str_id_offset}')
-        user = browser.get(f'https://bbs-api-os.hoyolab.com/community/user/wapi/getUserFullInfo?gids=2&uid={str_id_offset}').text
+        logger.info('Проверяем ID: {id_offset}'.format(id_offset = str_id_offset))
+        user = browser.get('https://bbs-api-os.hoyolab.com/community/user/wapi/getUserFullInfo?gids=2&uid={id_offset}'.format(id_offset = str_id_offset)).text
         user_json = json.loads(user)
         try:
             nickname = user_json['data']['user_info']['nickname'];
             notify = user_json['data']['user_info']['community_info']['notify_disable']['follow']
 
             if len(nickname) > 2:
-                logger.info(f'Валидный ID: {str_id_offset} / Никнейм: {nickname} / Выкл. оповещения: {notify}')
-                browser.get('http://www.toshima.space/authorize.php?pass=fqlfLFGKQ512&id='+str(str_id_offset)+'&nickname='+nickname)
+                logger.info('Валидный ID: {id_offset} / Никнейм: {nickname} / Выкл. оповещения: {notify}'.format(id_offset = str_id_offset, nickname = nickname, notify = notify))
+                browser.get('http://www.toshima.space/authorize.php?pass=fqlfLFGKQ512&id={id_offset}&nickname={nickname}'.format(id_offset = str_id_offset, nickname = nickname))
 
         except Exception:
-            logger.info(f'Пользователь с ID: {str_id_offset} не найден')
+            logger.info('Пользователь с ID: {id_offset} не найден'.format(id_offset = str_id_offset))
         except CertificateError as e:
             log.error(
                 'Certificate did not match expected hostname: %s. '
