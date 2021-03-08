@@ -1,11 +1,10 @@
-# LikeyStrike
+# Hoyolab Parser
 
-#### Подготовка
-Установка ависимостей: `py -m pip install -r requirements.txt`  
 
 #### Запуск
-Запуск модуля: `py likey.py`  
+Запуск поделки: `python3 hoyolab.py`  
 
 #### Использование
-Все параметры хранятся внутри `likey.py`. Фразы для спама по комментариям лежат в `comments.txt`  
+Данные пишутся в MongoDB
+Чтобы получить последний id, в GET на */authorize.php нужно указать last_id=true
 # Hoyolab-Parser
