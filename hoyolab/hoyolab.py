@@ -1,24 +1,16 @@
 from bs4 import BeautifulSoup
-from urllib.request import urlopen
-import time
 import requests
-
-from selenium import webdriver
-from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as ec
-from selenium.webdriver.common.action_chains import ActionChains
-
 import random
-import re
-import warnings
 import json
-import string
-from pyfiglet import Figlet
+import logging
+import json
 
-warnings.filterwarnings('ignore')
+
+logging.basicConfig(
+    level=logging.INFO, 
+    format='[%(asctime)s] {%(filename)s:%(lineno)d} %(levelname)s: %(message)s'
+)
+logger = logging.getLogger('hoyolab')
 
 
 REF = [
@@ -27,7 +19,8 @@ REF = [
     'https://yandex.ru/search/',
     'https://www.google.com/search'
 ]
-UAS = [
+
+UA = [
     'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.78 Safari/537.36',
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/74.0.3729.169 Safari/537.36',
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.113 Safari/537.36',
@@ -38,74 +31,53 @@ UAS = [
     'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:49.0) Gecko/20100101 Firefox/49.0'
     ]
 
-FOLLOWERS_SPAM = True
-LIKES_SPAM = True
-COMMENTS_SPAM = False
-
-def setup():
-    chrome_options = webdriver.ChromeOptions()
-    chrome_options.add_experimental_option('excludeSwitches', ['enable-logging'])
-    chrome_options.add_argument('--headless')
-    chrome_options.add_argument('--no-sandbox')
-    chrome_options.add_argument('--disable-dev-shm-usage')
-    chrome_options.add_argument("--disable-infobars")
-    chrome_options.add_argument("--disable-extensions")
-
-    browser = webdriver.Chrome(executable_path='chromedriver', chrome_options=chrome_options)
-    browser.implicitly_wait(10) # seconds
-
-    W = (random.randint(1024,1920))
-    H = (random.randint(768,1080))
-    browser.set_window_size(W, H)
-    browser.implicitly_wait(10)
-
-    return browser
-
-
-
-def set_sessions(browser):
+def set_sessions():
     request = requests.session()
     headers = {
-        "User-Agent": random.choice(UAS),
+        "User-Agent": random.choice(UA),
         'Referer': random.choice(REF)
         }
     request.headers.update(headers)
-    cookies = browser.get_cookies()
-    for cookie in cookies:
-        request.cookies.set(cookie['name'], cookie['value'])
 
     return request
 
 
-
-
-
-
-
 def parse_hoyoID(browser):
-    print('Получаем последний ID')
-    browser.get('https://www.toshima.space/authorize.php?last_id=true&pass=0&id=0&nickname=0&pass=fqlfLFGKQ512')
-    str_id_offset = int(browser.find_element_by_class_name("actual_id").text);
-    print('Последний ID: ' + str(str_id_offset))
-    print('Начинаем парсинг')
+    logger.info('Получаем последний ID')
+    actual_id_html = browser.get('https://www.toshima.space/authorize.php?last_id=true&pass=0&id=0&nickname=0&pass=fqlfLFGKQ512')
+
+    soup = BeautifulSoup(actual_id_html.text, 'html.parser')
+    actual_id = soup.find('div', class_='actual_id').getText()
+
+    logger.info(f'Последний ID: {actual_id}')
+    str_id_offset = int(actual_id)
+
+    logger.info('Начинаем парсинг')
     str_id_offset+=1
-    infinity = 1
-    while infinity < 10:
-        print('Проверяем ID: '+ str(str_id_offset))
-        browser.get('https://www.hoyolab.com/genshin/accountCenter/gameRecord?id='+ str(str_id_offset))
-        nickname = browser.find_element_by_class_name("mhy-account-center-user__name").text;
-        if len(nickname) > 2:
-            print('Валидный ID: '+ str(str_id_offset) +' Никнейм: '+nickname)
-            browser.get('http://toshima.space/authorize.php?pass=fqlfLFGKQ512&id='+str(str_id_offset)+'&nickname='+nickname)
+
+    while True:
+        logger.info(f'Проверяем ID: {str_id_offset}')
+        user = browser.get(f'https://bbs-api-os.hoyolab.com/community/user/wapi/getUserFullInfo?gids=2&uid={str_id_offset}').text
+        user_json = json.loads(user)
+        try:
+            nickname = user_json['data']['user_info']['nickname'];
+            notify = user_json['data']['user_info']['community_info']['notify_disable']['follow']
+
+            if len(nickname) > 2:
+                logger.info(f'Валидный ID: {str_id_offset} / Никнейм: {nickname} / Выкл. оповещения: {notify}')
+                browser.get('http://www.toshima.space/authorize.php?pass=fqlfLFGKQ512&id='+str(str_id_offset)+'&nickname='+nickname)
+
+        except Exception:
+            logger.info(f'Пользователь с ID: {str_id_offset} не найден')
+        except CertificateError as e:
+            log.error(
+                'Certificate did not match expected hostname: %s. '
+                'Certificate: %s', asserted_hostname, cert
+            )
+
         str_id_offset+=1
 
 
-
-
-
 if __name__=='__main__':
-    rend = Figlet(font='slant')
-    print (rend.renderText('HoYoLab'))
-    browser = setup()
-    set_sessions(browser)
-    parse_hoyoID(browser)
+    session = set_sessions()
+    parse_hoyoID(session)
