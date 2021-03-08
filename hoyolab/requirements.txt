@@ -1,0 +1,4 @@
+pyfiglet
+selenium
+bs4
+requests
